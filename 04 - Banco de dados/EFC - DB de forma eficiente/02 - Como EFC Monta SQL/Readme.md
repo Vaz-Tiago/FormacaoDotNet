@@ -1,6 +1,6 @@
 ## C# | Banco de Dados | Entity Framework Core
 
 ### Repositório de estudo.
-#### Parte 04 | Módulo 01
+#### Parte 04 | Módulo 02
 
-- Manipulando Objetos
+- Como o Entity monta o SQL?
