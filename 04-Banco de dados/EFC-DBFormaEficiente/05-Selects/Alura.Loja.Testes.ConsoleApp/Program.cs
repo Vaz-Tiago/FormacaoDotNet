@@ -1,9 +1,11 @@
-﻿using Microsoft.EntityFrameworkCore.ChangeTracking;
+﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.ChangeTracking;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 
 namespace Alura.Loja.Testes.ConsoleApp
 {
@@ -11,13 +13,99 @@ namespace Alura.Loja.Testes.ConsoleApp
     {
         static void Main(string[] args)
         {
+            using (var contexto = new LojaContext())
+            {
+                var serviceProvider = contexto.GetInfrastructure<IServiceProvider>();
+                var loggerFactory = serviceProvider.GetService<ILoggerFactory>();
+                loggerFactory.AddProvider(SqlLoggerProvider.Create());
 
+                var cliente = contexto
+                    .Clientes
+                    .Include(c => c.EnderecoDeEntrega)
+                    .FirstOrDefault();
 
+                Console.WriteLine($"Endereço de entrega {cliente.EnderecoDeEntrega.Logradouro}");
 
+                var produto = contexto
+                    .Produtos
+                    .Where(p => p.Id == 3002)
+                    .FirstOrDefault();
+
+                // Fazendo where dentro do include
+                // Necessário dois selects
+                contexto.Entry(produto) // Argumento o primeiro select
+                    .Collection(p => p.Compras) // Define que o select vai ser dentro de Compras
+                    .Query() // Diz que vai fazer uma nova query
+                    .Where(c => c.Preco > 10) // Passa as condições da query
+                    .Load(); // Carrega essa query para dentro de produtos
+                
+                Console.WriteLine($"Mostrando as compras do produto {produto.Nome}");
+                foreach (var item in produto.Compras)
+                {
+                    Console.WriteLine($"Foram comprados {item.Quantidade} {item.Produto.Nome}");
+                }
+            }
         }
 
+        // joins
+        private static void SelectProdutosPromocaoMtM()
+        {
+            using (var contexto = new LojaContext())
+            {
+                var serviceProvider = contexto.GetInfrastructure<IServiceProvider>();
+                var loggerFactory = serviceProvider.GetService<ILoggerFactory>();
+                loggerFactory.AddProvider(SqlLoggerProvider.Create());
 
+                // Select Many to Many
+                var promocao = contexto
+                    .Promocoes
+                    .Include(p => p.Produtos)
+                    .ThenInclude(pp => pp.Produto)
+                    .FirstOrDefault();
+                Console.WriteLine("Mostrando os produtos da promoção");
 
+                foreach (var item in promocao.Produtos)
+                {
+                    Console.WriteLine(item.Produto);
+                }
+            }
+        }
+        private static void IncluirPromocao()
+        {
+            using (var contexto = new LojaContext())
+            {
+
+                var promocao = new Promocao();
+                promocao.Descricao = "Queima de abril";
+                promocao.DataInicio = new DateTime(2020, 4, 1);
+                promocao.DataTermino = new DateTime(2020, 4, 30);
+
+                var produtos = contexto
+                    .Produtos
+                    .Where(p => p.Categoria == "Bebidas")
+                    .ToList();
+
+                foreach (var item in produtos)
+                {
+                    promocao.IncluirProduto(item);
+                }
+
+                contexto.Promocoes.Add(promocao);
+                contexto.SaveChanges();
+            }
+        }
+        private static void IncluirBebidas(LojaContext contexto)
+        {
+            var vinho = new Produto() { Nome = "Vinho", Categoria = "Bebidas", PrecoUnitario = 47.30, Unidade = "Litro" };
+            var breja = new Produto() { Nome = "Cerveja", Categoria = "Bebidas", PrecoUnitario = 3.30, Unidade = "ml" };
+
+            contexto.Produtos.Add(vinho);
+            contexto.Produtos.Add(breja);
+
+            contexto.SaveChanges();
+        }
+
+        // Relacionamentos
         private static void AddClienteEnderecoOtM()
         {
             var fulano = new Cliente();
@@ -80,17 +168,17 @@ namespace Alura.Loja.Testes.ConsoleApp
 
             }
         }
-        static void ComprarPao()
+        static void ComprarPao(int quantidade)
         {
             // compra de pao
             var paoFrances = new Produto();
             paoFrances.Nome = "Pão Frances";
             paoFrances.PrecoUnitario = 0.40;
-            paoFrances.Unidade = "unidades";
+            paoFrances.Unidade = "Unidades";
             paoFrances.Categoria = "Padaria";
 
             var compra = new Compra();
-            compra.Quantidade = 6;
+            compra.Quantidade = quantidade;
             compra.Produto = paoFrances;
             compra.Preco = paoFrances.PrecoUnitario * compra.Quantidade;
 
