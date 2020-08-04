@@ -17,6 +17,8 @@ namespace CasaDoCodigo
         {
             base.OnModelCreating(modelBuilder);
 
+            // Cria a entidade definindo PK e Relacionamentos
+            
             modelBuilder.Entity<Produto>().HasKey(t => t.Id);
 
             modelBuilder.Entity<Pedido>().HasKey(t => t.Id);

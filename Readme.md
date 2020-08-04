@@ -6,3 +6,4 @@
 - Orientação a Objeto
 - Entity Framework Core
 - Estrutura MVC e Introdução ao AspNetCore
+- API Rest
